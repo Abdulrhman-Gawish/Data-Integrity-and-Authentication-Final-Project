@@ -19,7 +19,7 @@ export default function SignupPage() {
   // API URLs - replace with your actual endpoints
   const API_URLS = {
     signup: 'http://localhost:4000/api/auth/signup',
-    githubAuth: 'https://your-api.com/api/auth/github'
+    githubAuth: 'https/api/auth/github'
   };
 
   const handleChange = (e) => {
