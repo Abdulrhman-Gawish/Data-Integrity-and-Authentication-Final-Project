@@ -1,0 +1,47 @@
+# Node modules
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Environment variables
+.env
+.env.test
+.env.production
+.env.local
+
+.npm/
+
+dist/
+build/
+tmp/
+temp/
+
+.DS_Store
+Thumbs.db
+
+.vscode/
+.idea/
+
+coverage/
+
+jspm_packages/
+bower_components/
+
+*.tsbuildinfo
+
+.next/
+out/
+.svelte-kit/
+
+*.tgz
