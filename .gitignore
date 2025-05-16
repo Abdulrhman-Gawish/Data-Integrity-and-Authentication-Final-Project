@@ -1,6 +1,14 @@
 # Node modules
 node_modules/
 
+
+# Ignore private keys and certificates 
+/config/private_key.pem
+/config/public_key.pem
+/config/cert.pem
+/config/key.pem
+
+
 # Logs
 logs/
 *.log
@@ -45,3 +53,4 @@ out/
 .svelte-kit/
 
 *.tgz
+

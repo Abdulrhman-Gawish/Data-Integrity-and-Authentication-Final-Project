@@ -202,7 +202,6 @@ const verify2FA = async (req, res, next) => {
 
     console.log(user.twoFASecret);
     console.log(verified);
-    
 
     if (!verified) {
       return next(new AppError("2FA authentication failed", 401));

@@ -16,7 +16,6 @@ export default function SignupPage() {
     role: 'user'
   });
 
-  // API URLs - replace with your actual endpoints
   const API_URLS = {
     signup: 'http://localhost:4000/api/auth/signup',
     githubAuth: 'https/api/auth/github'

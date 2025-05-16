@@ -1,6 +1,15 @@
-import { useState } from 'react';
-import { Eye, EyeOff, Mail, Lock, LogIn, ArrowRight, Github } from 'lucide-react';
-import { Link } from 'react-router-dom'; // Assuming you're using React Router
+import { useState } from "react";
+import {
+  Eye,
+  EyeOff,
+  Mail,
+  Lock,
+  LogIn,
+  ArrowRight,
+  Github,
+} from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "../utils/axios.js";
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -13,7 +22,6 @@ export default function LoginPage() {
     password: ''
   });
 
-  // API URLs - replace with your actual endpoints
   const API_URLS = {
     login: 'http://localhost:4000/api/auth/login',
     githubAuth: 'https:/api/auth/github'
@@ -79,7 +87,6 @@ export default function LoginPage() {
     setError('');
     
     try {
-      // In a real implementation, this would typically redirect to GitHub OAuth flow
       window.location.href = `${API_URLS.githubAuth}?redirect_uri=${window.location.origin}/auth/callback`;
     } catch (err) {
       setError('Failed to connect with GitHub');
@@ -220,7 +227,6 @@ export default function LoginPage() {
             </button>
           </div>
 
-          {/* Switch to signup */}
           <p className="text-center mt-6 text-gray-600 text-sm">
             Don't have an account?{" "}
             <Link
