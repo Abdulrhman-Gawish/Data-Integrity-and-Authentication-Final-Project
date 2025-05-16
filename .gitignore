@@ -2,12 +2,12 @@
 node_modules/
 
 
-# Ignore private keys and certificates 
-/config/private_key.pem
-/config/public_key.pem
-/config/cert.pem
-/config/key.pem
-
+ 
+# Ignore sensitive config files
+backend/config/*.pem
+backend/config/cert.pem
+backend/config/private_key.pem
+backend/config/public_key.pem
 
 # Logs
 logs/
