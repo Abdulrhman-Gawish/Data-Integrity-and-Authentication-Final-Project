@@ -1,6 +1,7 @@
 const User = require("../models/user");
 const QRCode = require("qrcode");
 const speakeasy = require("speakeasy");
+const axios = require("axios");
 const generateTokenAndSetCookie = require("../utils/generateTokenAndSetCookie");
 const AppError = require("../utils/appError");
 
@@ -45,7 +46,9 @@ const signUp = async (req, res, next) => {
   } catch (error) {
     if (error.name === "ValidationError") {
       const errors = Object.values(error.errors).map((err) => err.message);
-      return next(new AppError(`Invalid input data: ${errors.join(". ")}`, 400));
+      return next(
+        new AppError(`Invalid input data: ${errors.join(". ")}`, 400)
+      );
     }
     next(error);
   }
@@ -63,7 +66,9 @@ const login = async (req, res, next) => {
       return next(new AppError("Please provide email and password", 400));
     }
 
-    const user = await User.findOne({ email }).select("+password +is2FAEnabled +twoFASecret");
+    const user = await User.findOne({ email }).select(
+      "+password +is2FAEnabled +twoFASecret"
+    );
     if (!user || !(await user.comparePassword(password))) {
       return next(new AppError("Incorrect email or password", 401));
     }
@@ -81,6 +86,7 @@ const login = async (req, res, next) => {
           name: user.name,
           email: user.email,
           role: user.role,
+          is2FAEnabled: user.is2FAEnabled,
         },
       },
     });
@@ -131,7 +137,7 @@ const checkAuth = async (req, res, next) => {
  */
 const enable2FA = async (req, res, next) => {
   try {
-    const { userId } = req.body;
+    const userId = req.userId;
     if (!userId) {
       return next(new AppError("User ID is required", 400));
     }
@@ -147,7 +153,9 @@ const enable2FA = async (req, res, next) => {
 
     let secret = user.twoFASecret;
     if (!secret) {
-      const newSecret = speakeasy.generateSecret({ name: `mgmt-task:${user.name || user.email}` });
+      const newSecret = speakeasy.generateSecret({
+        name: `mgmt-task:${user.name || user.email}`,
+      });
       secret = newSecret.base32;
       user.twoFASecret = secret;
       await user.save();
@@ -183,7 +191,8 @@ const enable2FA = async (req, res, next) => {
  */
 const verify2FA = async (req, res, next) => {
   try {
-    const { userId, token } = req.body;
+    const { token } = req.body;
+    const userId = req.userId;
     if (!userId || !token) {
       return next(new AppError("User ID and token are required", 400));
     }
@@ -219,6 +228,99 @@ const verify2FA = async (req, res, next) => {
   }
 };
 
+/**
+ * @desc    Redirect user to GitHub for OAuth login
+ * @route   GET /api/auth/github
+ * @access  Public
+ */
+
+const githubAuth = (req, res) => {
+  const params = new URLSearchParams({
+    client_id: process.env.GITHUB_CLIENT_ID,
+    scope: "user:email",
+  });
+  const redirectURL = `https://github.com/login/oauth/authorize?${params}`;
+  res.redirect(redirectURL);
+};
+
+/**
+ * @desc    GitHub OAuth callback to exchange code for access token and fetch user info
+ * @route   GET /api/auth/github/callback
+ * @access  Public
+ */
+const githubCallback = async (req, res) => {
+  const code = req.query.code;
+  try {
+    const tokenResponse = await axios.post(
+      `https://github.com/login/oauth/access_token`,
+      {
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code: code,
+      },
+      { headers: { accept: "application/json" } }
+    );
+
+    const accessToken = tokenResponse.data.access_token;
+
+    if (!accessToken) {
+      return next(new AppError("Failed to retrieve access token", 400));
+    }
+
+    // Fetch GitHub user data
+    const userResponse = await axios.get("https://api.github.com/user", {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
+
+    const { id: githubId, login } = userResponse.data;
+
+    // Fetch GitHub user emails
+    const emailResponse = await axios.get(
+      "https://api.github.com/user/emails",
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+
+    const emails = emailResponse.data;
+    const primaryEmailObj = emails.find((e) => e.primary && e.verified);
+    const email = primaryEmailObj ? primaryEmailObj.email : null;
+
+    // find or create user
+    let user = await User.findOne({ github_id: githubId });
+
+    if (!user) {
+      const existingEmailUser = email ? await User.findOne({ email }) : null;
+
+      if (existingEmailUser) {
+        return next(
+          new AppError("Email already associated with another account", 409)
+        );
+      }
+
+      user = new User({
+        name: login,
+        email: email || undefined,
+        auth_method: "github",
+        github_id: githubId,
+      });
+
+      await user.save();
+    }
+    const payload = { userId: user._id, userRole: user.role };
+
+    generateTokenAndSetCookie(payload, res);
+    res.cookie("github_token", accessToken, { httpOnly: true });
+
+    res.redirect(`${process.env.FRONTEND_URL}/userDashboard`);
+  } catch (error) {
+    console.error("GitHub OAuth error:", error);
+    res.status(500).send("OAuth with GitHub failed");
+  }
+};
+
 module.exports = {
   signUp,
   login,
@@ -226,4 +328,6 @@ module.exports = {
   checkAuth,
   enable2FA,
   verify2FA,
+  githubAuth,
+  githubCallback,
 };

@@ -12,92 +12,81 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "../utils/axios.js";
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: "",
+    password: "",
   });
 
   const API_URLS = {
-    login: 'http://localhost:4000/api/auth/login',
-    githubAuth: 'https:/api/auth/github'
+    githubAuth: "http://localhost:4000/api/auth/github",
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
-    setSuccess('');
-    
+    setError("");
+    setSuccess("");
+
     try {
-      const response = await fetch(API_URLS.login, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
-        }),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+      const response = await axios.post("/auth/login", formData);
+      const data = response.data;
+
+      if (!data.data?.token) {
+        throw new Error(data.message || "Login failed");
       }
-      
-      // Handle successful response
-      setSuccess('Login successful!');
-      
-      // Store token in localStorage or handle as needed
-      if (data.token) {
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('userRole', data.user?.role);
+
+      setSuccess("Login successful!");
+
+      // Save token and user role
+      localStorage.setItem("authToken", data.data.token);
+      localStorage.setItem("userRole", data.data.user.role);
+      if (data.data.user.role === "admin") {
+        navigate("/adminDashboard");
+      } else {
+        if (!data.data.user.is2FAEnabled) {
+          navigate("/setup-2fa");
+        } else if (data.data.user.is2FAEnabled) {
+          navigate("/verify-2fa");
+        } else {  
+          navigate("/userDashboard");
+        }
       }
-      
-      // Redirect or other post-login actions
-      console.log('Login successful:', data);
-      
-      // In a real app, you might redirect here
-      // window.location.href = '/dashboard';
-      
     } catch (err) {
-      setError(err.message || 'An error occurred. Please try again.');
-      console.error('Login error:', err);
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Login failed. Please try again."
+      );
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const handleGithubLogin = () => {
-    setIsLoading(true);
-    setError('');
-    
     try {
       window.location.href = `${API_URLS.githubAuth}?redirect_uri=${window.location.origin}/auth/callback`;
     } catch (err) {
-      setError('Failed to connect with GitHub');
-      setIsLoading(false);
+      setError("Failed to connect with GitHub");
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-xl overflow-hidden">
-        {/* Header */}
         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6">
           <div className="flex justify-between items-center">
             <h1 className="text-white text-2xl font-bold">Welcome Back</h1>
@@ -109,17 +98,16 @@ export default function LoginPage() {
               <ArrowRight size={14} />
             </Link>
           </div>
-          <p className="text-blue-100 mt-2">
-            Sign in to access your account
-          </p>
+          <p className="text-blue-100 mt-2">Sign in to access your account</p>
         </div>
 
-        {/* Form Content */}
         <div className="p-6">
           <form onSubmit={handleSubmit}>
-            {/* Email field */}
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="email">
+              <label
+                className="block text-gray-700 text-sm font-medium mb-2"
+                htmlFor="email"
+              >
                 Email Address
               </label>
               <div className="relative">
@@ -139,9 +127,11 @@ export default function LoginPage() {
               </div>
             </div>
 
-            {/* Password field */}
             <div className="mb-6">
-              <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="password">
+              <label
+                className="block text-gray-700 text-sm font-medium mb-2"
+                htmlFor="password"
+              >
                 Password
               </label>
               <div className="relative">
@@ -151,7 +141,7 @@ export default function LoginPage() {
                 <input
                   id="password"
                   name="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="••••••••"
@@ -167,30 +157,28 @@ export default function LoginPage() {
                 </button>
               </div>
               <div className="flex justify-end mt-2">
-                <button 
+                <button
                   type="button"
                   className="text-sm text-blue-600 hover:text-blue-800"
-                  onClick={() => console.log('Forgot password clicked')}
+                  onClick={() => console.log("Forgot password clicked")}
                 >
                   Forgot password?
                 </button>
               </div>
             </div>
 
-            {/* Error and success messages */}
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
                 {error}
               </div>
             )}
-            
+
             {success && (
               <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
                 {success}
               </div>
             )}
 
-            {/* Submit button */}
             <button
               type="submit"
               disabled={isLoading}
@@ -207,14 +195,12 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Divider */}
           <div className="flex items-center my-6">
             <div className="flex-grow border-t border-gray-300"></div>
             <span className="px-4 text-gray-500 text-sm">OR CONTINUE WITH</span>
             <div className="flex-grow border-t border-gray-300"></div>
           </div>
 
-          {/* Social login button - GitHub */}
           <div className="flex justify-center">
             <button
               type="button"

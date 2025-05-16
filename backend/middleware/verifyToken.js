@@ -1,6 +1,6 @@
 const jwt = require("jsonwebtoken");
-
-const verifyToken = (req, res, next) => {
+const User = require("../models/user");
+const verifyToken = async (req, res, next) => {
   try {
     const token = req.cookies.token;
 
@@ -19,6 +19,8 @@ const verifyToken = (req, res, next) => {
     }
     req.userId = decoded.userId;
     req.userRole = decoded.userRole;
+    const user = await User.findById(req.userId);
+    req.user = user;  
 
     next();
   } catch (error) {

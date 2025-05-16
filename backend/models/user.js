@@ -28,12 +28,25 @@ const userSchema = new Schema(
         message: "Please provide a valid email address",
       },
     },
+    auth_method: {
+      type: String,
+      enum: ["manual", "github"],
+      default: "manual",
+    },
+    github_id: {
+      type: String,
+      unique: true,
+      sparse: true, // ignores missing github_ids
+    },
     password: {
       type: String,
-      required: [true, "Password is required"],
+      required: function () {
+        return this.auth_method === "manual";
+      },
       minlength: [8, "Password must be at least 8 characters"],
       validate: {
         validator: function (value) {
+          if (this.auth_method !== "manual") return true; // skip validation for non-manual users
           return validator.isStrongPassword(value, {
             minLength: 8,
             minLowercase: 1,
@@ -42,9 +55,10 @@ const userSchema = new Schema(
             minSymbols: 1,
           });
         },
-        message: "Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol",
+        message:
+          "Password must contain at least one uppercase letter, one lowercase letter, one number, and one symbol",
       },
-      select: false, 
+      select: false,
     },
     role: {
       type: String,
@@ -60,18 +74,18 @@ const userSchema = new Schema(
     },
     twoFASecret: {
       type: String,
-      select: true, 
+      select: true,
     },
     lastLogin: {
       type: Date,
       default: Date.now,
     },
   },
-  { 
+  {
     timestamps: true,
     toJSON: {
       transform: function (doc, ret) {
-        delete ret.password; 
+        delete ret.password;
         delete ret.twoFASecret;
         return ret;
       },
@@ -81,10 +95,10 @@ const userSchema = new Schema(
 
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
-  
+
   try {
     const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt); 
+    this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
     next(error);

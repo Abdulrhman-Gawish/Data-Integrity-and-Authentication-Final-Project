@@ -1,92 +1,93 @@
-import { useState } from 'react';
-import { Eye, EyeOff, User, Mail, Lock, UserPlus, ArrowRight, Github, Shield, UserCircle } from 'lucide-react';
-import { Link } from 'react-router-dom'; // Assuming you're using React Router
+// src/pages/SignupPage.jsx
+import { useState } from "react";
+import {
+  Eye,
+  EyeOff,
+  User,
+  Mail,
+  Lock,
+  UserPlus,
+  ArrowRight,
+  Github,
+  Shield,
+  UserCircle,
+} from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { signup, githubLoginUrl } from "../services/api";
 
 export default function SignupPage() {
+  const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [selectedRole, setSelectedRole] = useState('user'); // Default role
-  
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    role: 'user'
-  });
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [selectedRole, setSelectedRole] = useState("user");
 
-  const API_URLS = {
-    signup: 'http://localhost:4000/api/auth/signup',
-    githubAuth: 'https/api/auth/github'
-  };
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "user",
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [name]: value
+      [name]: value,
     }));
   };
 
   const handleRoleChange = (role) => {
     setSelectedRole(role);
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      role: role
+      role,
     }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
-    setSuccess('');
-    
+    setError("");
+    setSuccess("");
+
     try {
-      const response = await fetch(API_URLS.signup, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.message || 'Account creation failed');
-      }
-      
-      // Handle successful response
-      setSuccess('Account created successfully!');
-      
-      // Store token in localStorage if available in response
+      const data = await signup(formData);
+
+      setSuccess("Account created successfully!");
+
       if (data.token) {
-        localStorage.setItem('authToken', data.token);
-        localStorage.setItem('userRole', formData.role);
+        localStorage.setItem("authToken", data.token);
+        localStorage.setItem("userRole", formData.role);
       }
-      
-      // In a real app, you might redirect here
-      // window.location.href = '/dashboard';
-      
+      if (formData.role === "admin") {
+        navigate("/adminDashboard");
+      } else {
+        navigate("/userDashboard");
+      }
+
     } catch (err) {
-      setError(err.message || 'An error occurred. Please try again.');
-      console.error('Signup error:', err);
+      setError( 
+        err?.response?.data?.message ||
+          err.message ||
+          "An error occurred. Please try again."
+      );
+      console.error("Signup error:", err);
     } finally {
       setIsLoading(false);
     }
   };
-  
+
   const handleGithubLogin = () => {
     setIsLoading(true);
-    setError('');
-    
+    setError("");
+
     try {
-      // In a real implementation, this would typically redirect to GitHub OAuth flow
-      window.location.href = `${API_URLS.githubAuth}?redirect_uri=${window.location.origin}/auth/callback`;
+      const url = githubLoginUrl();
+      window.location.href = url;
     } catch (err) {
-      setError('Failed to connect with GitHub');
+      setError("Failed to connect with GitHub");
       setIsLoading(false);
     }
   };
@@ -94,7 +95,6 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-xl overflow-hidden">
-        {/* Header */}
         <div className="bg-gradient-to-r from-blue-500 to-indigo-600 p-6">
           <div className="flex justify-between items-center">
             <h1 className="text-white text-2xl font-bold">Create Account</h1>
@@ -111,12 +111,14 @@ export default function SignupPage() {
           </p>
         </div>
 
-        {/* Form Content */}
         <div className="p-6">
           <form onSubmit={handleSubmit}>
-            {/* Name field */}
+            {/* Name */}
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="name">
+              <label
+                htmlFor="name"
+                className="block text-gray-700 text-sm font-medium mb-2"
+              >
                 Full Name
               </label>
               <div className="relative">
@@ -129,16 +131,19 @@ export default function SignupPage() {
                   type="text"
                   value={formData.name}
                   onChange={handleChange}
-                  placeholder="John Doe"
-                  className="w-full py-2 pl-10 pr-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Your Name"
+                  className="w-full py-2 pl-10 pr-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
             </div>
 
-            {/* Email field */}
+            {/* Email */}
             <div className="mb-4">
-              <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="email">
+              <label
+                htmlFor="email"
+                className="block text-gray-700 text-sm font-medium mb-2"
+              >
                 Email Address
               </label>
               <div className="relative">
@@ -152,15 +157,18 @@ export default function SignupPage() {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="your@email.com"
-                  className="w-full py-2 pl-10 pr-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full py-2 pl-10 pr-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
               </div>
             </div>
 
-            {/* Password field */}
+            {/* Password */}
             <div className="mb-6">
-              <label className="block text-gray-700 text-sm font-medium mb-2" htmlFor="password">
+              <label
+                htmlFor="password"
+                className="block text-gray-700 text-sm font-medium mb-2"
+              >
                 Password
               </label>
               <div className="relative">
@@ -170,11 +178,11 @@ export default function SignupPage() {
                 <input
                   id="password"
                   name="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={handleChange}
                   placeholder="Create password"
-                  className="w-full py-2 pl-10 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full py-2 pl-10 pr-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
                 <button
@@ -187,7 +195,7 @@ export default function SignupPage() {
               </div>
             </div>
 
-            {/* Role selection */}
+            {/* Role */}
             <div className="mb-6">
               <label className="block text-gray-700 text-sm font-medium mb-2">
                 Account Type
@@ -195,11 +203,11 @@ export default function SignupPage() {
               <div className="flex gap-3">
                 <button
                   type="button"
-                  onClick={() => handleRoleChange('user')}
+                  onClick={() => handleRoleChange("user")}
                   className={`flex-1 py-2 px-3 flex items-center justify-center gap-2 rounded-lg border ${
-                    selectedRole === 'user'
-                      ? 'bg-blue-50 border-blue-500 text-blue-700'
-                      : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                    selectedRole === "user"
+                      ? "bg-blue-50 border-blue-500 text-blue-700"
+                      : "border-gray-300 text-gray-600 hover:bg-gray-50"
                   } transition duration-200`}
                 >
                   <UserCircle size={18} />
@@ -207,11 +215,11 @@ export default function SignupPage() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleRoleChange('admin')}
+                  onClick={() => handleRoleChange("admin")}
                   className={`flex-1 py-2 px-3 flex items-center justify-center gap-2 rounded-lg border ${
-                    selectedRole === 'admin'
-                      ? 'bg-blue-50 border-blue-500 text-blue-700'
-                      : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                    selectedRole === "admin"
+                      ? "bg-blue-50 border-blue-500 text-blue-700"
+                      : "border-gray-300 text-gray-600 hover:bg-gray-50"
                   } transition duration-200`}
                 >
                   <Shield size={18} />
@@ -220,20 +228,20 @@ export default function SignupPage() {
               </div>
             </div>
 
-            {/* Error and success messages */}
+            {/* Alerts */}
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-lg text-sm">
                 {error}
               </div>
             )}
-            
+
             {success && (
               <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 rounded-lg text-sm">
                 {success}
               </div>
             )}
 
-            {/* Submit button */}
+            {/* Submit */}
             <button
               type="submit"
               disabled={isLoading}
@@ -257,7 +265,7 @@ export default function SignupPage() {
             <div className="flex-grow border-t border-gray-300"></div>
           </div>
 
-          {/* Social login button - GitHub */}
+          {/* GitHub Login */}
           <div className="flex justify-center">
             <button
               type="button"
@@ -270,7 +278,7 @@ export default function SignupPage() {
             </button>
           </div>
 
-          {/* Switch to login */}
+          {/* Switch to Login */}
           <p className="text-center mt-6 text-gray-600 text-sm">
             Already have an account?{" "}
             <Link
