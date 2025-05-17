@@ -32,7 +32,6 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT;
 
-// Connect to the database first
 connectDB()
   .then(() => {
     const server = https.createServer(sslOptions, app);
