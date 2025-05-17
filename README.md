@@ -1,4 +1,3 @@
-
  Secure Document Vault
 
 This guide explains how to run the project locally.
