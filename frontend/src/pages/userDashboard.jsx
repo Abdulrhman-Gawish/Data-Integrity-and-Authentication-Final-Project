@@ -13,6 +13,7 @@ import {
   User,
   Save,
   ChevronDown,
+  ShieldCheck,
 } from "lucide-react";
 
 import {
@@ -24,6 +25,7 @@ import {
   logout,
   getCurrentUser,
   updateUserProfile,
+  verifyDocumentSignature,
 } from "../services/api";
 
 export default function Dashboard() {
@@ -42,6 +44,7 @@ export default function Dashboard() {
     email: "",
     password: "",
   });
+  const [verificationStatus, setVerificationStatus] = useState({});
 
   useEffect(() => {
     fetchUserData();
@@ -90,7 +93,7 @@ export default function Dashboard() {
   const handleProfileSave = async () => {
     try {
       const updatedUser = await updateUserProfile(profileForm);
-      console.log("User: ", updatedUser); // debugging 
+      console.log("User: ", updatedUser); // debugging
 
       setUser(updatedUser.user);
       setIsEditingProfile(false);
@@ -146,6 +149,29 @@ export default function Dashboard() {
       link.remove();
     } catch (err) {
       setError("Download failed");
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleVerifySignature = async (docId) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await verifyDocumentSignature(docId);
+      console.log(response); // for dubgging
+
+      setVerificationStatus((prev) => ({
+        ...prev,
+        [docId]: {
+          status: response.status,
+          message: response.message,
+          verifiedAt: new Date().toISOString(),
+        },
+      }));
+    } catch (err) {
+      setError("Signature verification failed");
       console.error(err);
     } finally {
       setIsLoading(false);
@@ -453,26 +479,28 @@ export default function Dashboard() {
                     {filteredDocuments.map((doc) => (
                       <tr key={doc._id} className="hover:bg-gray-50">
                         <td className="py-4 px-4">
-                          {editingDoc && editingDoc._id === doc._id ? (
-                            <div className="flex items-center">
-                              <input
-                                type="text"
-                                value={newDocName}
-                                onChange={(e) => setNewDocName(e.target.value)}
-                                className="border rounded px-2 py-1 w-full"
-                                autoFocus
-                              />
-                            </div>
-                          ) : (
-                            <div className="flex items-center">
-                              <span className="mr-2 text-lg">
-                                {getFileIcon(doc.mimeType)}
-                              </span>
-                              <span className="font-medium text-gray-900">
+                          <div className="flex items-center">
+                            <span className="mr-2 text-lg">
+                              {getFileIcon(doc.mimeType)}
+                            </span>
+                            <div>
+                              <span className="font-medium text-gray-900 block">
                                 {doc.originalName}
                               </span>
+                              {verificationStatus[doc._id] && (
+                                <span
+                                  className={`text-xs ${
+                                    verificationStatus[doc._id].status ===
+                                    "success"
+                                      ? "text-green-600"
+                                      : "text-red-600"
+                                  }`}
+                                >
+                                  {verificationStatus[doc._id].message}
+                                </span>
+                              )}
                             </div>
-                          )}
+                          </div>
                         </td>
                         <td className="py-4 px-4 text-sm text-gray-500">
                           {formatDate(doc.createdAt)}
@@ -488,27 +516,14 @@ export default function Dashboard() {
                                 className="bg-green-500 hover:bg-green-600 text-white p-1 rounded"
                                 title="Save"
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-5 w-5"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M5 13l4 4L19 7"
-                                  />
-                                </svg>
+                                <Save size={18} />
                               </button>
                               <button
                                 onClick={cancelEdit}
                                 className="bg-gray-400 hover:bg-gray-500 text-white p-1 rounded"
                                 title="Cancel"
                               >
-                                <X size={20} />
+                                <X size={18} />
                               </button>
                             </div>
                           ) : showConfirmDelete === doc._id ? (
@@ -518,27 +533,14 @@ export default function Dashboard() {
                                 className="bg-red-500 hover:bg-red-600 text-white p-1 rounded"
                                 title="Confirm Delete"
                               >
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-5 w-5"
-                                  fill="none"
-                                  viewBox="0 0 24 24"
-                                  stroke="currentColor"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M5 13l4 4L19 7"
-                                  />
-                                </svg>
+                                <Trash2 size={18} />
                               </button>
                               <button
                                 onClick={cancelDelete}
                                 className="bg-gray-400 hover:bg-gray-500 text-white p-1 rounded"
                                 title="Cancel Delete"
                               >
-                                <X size={20} />
+                                <X size={18} />
                               </button>
                             </div>
                           ) : (
@@ -549,6 +551,14 @@ export default function Dashboard() {
                                 title="Download"
                               >
                                 <Download size={18} />
+                              </button>
+                              <button
+                                onClick={() => handleVerifySignature(doc._id)}
+                                className="text-green-600 hover:text-green-800 p-1"
+                                title="Verify Signature"
+                                disabled={isLoading}
+                              >
+                                <ShieldCheck size={18} />
                               </button>
                               <button
                                 onClick={() => startEdit(doc)}
