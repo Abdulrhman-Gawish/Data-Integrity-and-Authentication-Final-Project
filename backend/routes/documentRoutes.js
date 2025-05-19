@@ -6,6 +6,7 @@ const {
   getDocuments,
   deleteDocument,
   updateDocument,
+  verifyDocumentSignaturee,
 } = require("../controllers/documentController");
 const auth = require("../middleware/verifyToken");
 
@@ -22,5 +23,8 @@ router.patch("/:id", auth, updateDocument);
 
 // Download (GET /api/documents/:id/download)
 router.get("/:id/download", auth, downloadDocument);
+
+// Verify (GET /api/documents/:id/verify)
+router.get("/:id/verify", auth, verifyDocumentSignaturee);
 
 module.exports = router;
