@@ -107,3 +107,10 @@ export const getLogs = async (params = {}) => {
     throw error;
   }
 };
+
+export const verifyDocumentSignature = async (docId) => {
+  const response = await axios.get(`/documents/${docId}/verify`);
+  return response.data;
+};
+
+

@@ -484,20 +484,34 @@ export default function Dashboard() {
                               {getFileIcon(doc.mimeType)}
                             </span>
                             <div>
-                              <span className="font-medium text-gray-900 block">
-                                {doc.originalName}
-                              </span>
-                              {verificationStatus[doc._id] && (
-                                <span
-                                  className={`text-xs ${
-                                    verificationStatus[doc._id].status ===
-                                    "success"
-                                      ? "text-green-600"
-                                      : "text-red-600"
-                                  }`}
-                                >
-                                  {verificationStatus[doc._id].message}
-                                </span>
+                              {editingDoc && editingDoc._id === doc._id ? (
+                                <input
+                                  type="text"
+                                  value={newDocName}
+                                  onChange={(e) =>
+                                    setNewDocName(e.target.value)
+                                  }
+                                  className="border rounded px-2 py-1 w-full"
+                                  autoFocus
+                                />
+                              ) : (
+                                <>
+                                  <span className="font-medium text-gray-900 block">
+                                    {doc.originalName}
+                                  </span>
+                                  {verificationStatus[doc._id] && (
+                                    <span
+                                      className={`text-xs ${
+                                        verificationStatus[doc._id].status ===
+                                        "success"
+                                          ? "text-green-600"
+                                          : "text-red-600"
+                                      }`}
+                                    >
+                                      {verificationStatus[doc._id].message}
+                                    </span>
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>
@@ -516,14 +530,27 @@ export default function Dashboard() {
                                 className="bg-green-500 hover:bg-green-600 text-white p-1 rounded"
                                 title="Save"
                               >
-                                <Save size={18} />
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-5 w-5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
                               </button>
                               <button
                                 onClick={cancelEdit}
                                 className="bg-gray-400 hover:bg-gray-500 text-white p-1 rounded"
                                 title="Cancel"
                               >
-                                <X size={18} />
+                                <X size={20} />
                               </button>
                             </div>
                           ) : showConfirmDelete === doc._id ? (
@@ -533,14 +560,27 @@ export default function Dashboard() {
                                 className="bg-red-500 hover:bg-red-600 text-white p-1 rounded"
                                 title="Confirm Delete"
                               >
-                                <Trash2 size={18} />
+                                <svg
+                                  xmlns="http://www.w3.org/2000/svg"
+                                  className="h-5 w-5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 13l4 4L19 7"
+                                  />
+                                </svg>
                               </button>
                               <button
                                 onClick={cancelDelete}
                                 className="bg-gray-400 hover:bg-gray-500 text-white p-1 rounded"
                                 title="Cancel Delete"
                               >
-                                <X size={18} />
+                                <X size={20} />
                               </button>
                             </div>
                           ) : (
