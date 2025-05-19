@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const mongoose = require("mongoose");
 const {
   createDocumentSignature,
   verifyDocumentSignature,
@@ -14,7 +15,7 @@ const {
   decrypt,
   decryptKey,
   encrypt,
-  encryptKey, 
+  encryptKey,
   generateHash,
 } = require("../utils/crypto");
 
@@ -90,6 +91,105 @@ const uploadDocument = async (req, res, next) => {
 };
 
 /**
+ * @desc    Verify the digital signature of a document
+ * @route   GET /api/documents/:id/verify
+ * @access  Private
+ * @param   {string} id - Document ID
+ * @returns {Object} Verification status and document metadata
+ */
+const verifyDocumentSignaturee = async (req, res, next) => {
+  try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return next(new AppError("Invalid document ID format", 400));
+    }
+
+    const document = await Document.findOne({
+      _id: req.params.id,
+      userId: req.userId,
+    }).select("+encryptedKey +iv +encryptedData +sha256Hash +digitalSignature");
+
+    if (!document) {
+      return next(new AppError("Document not found or access denied", 404));
+    }
+
+    if (
+      !document.encryptedKey ||
+      !document.iv ||
+      !document.encryptedData ||
+      !document.sha256Hash ||
+      !document.digitalSignature
+    ) {
+      return next(
+        new AppError("Document missing required verification data", 400)
+      );
+    }
+
+    try {
+      const aesKey = decryptKey(document.encryptedKey, masterKey);
+      const decryptedData = decrypt(
+        document.encryptedData,
+        aesKey,
+        document.iv
+      );
+
+      verifyDocumentIntegrity(decryptedData, document.sha256Hash);
+
+      const isSignatureValid = verifyDocumentSignature(
+        decryptedData,
+        document.digitalSignature
+      );
+
+      if (isSignatureValid) {
+        res.status(200).json({
+          status: "success",
+          message: "Document signature verified successfully",
+          data: {
+            documentId: document._id,
+            documentName: document.name,
+            documentType: document.type,
+            uploadedAt: document.createdAt,
+            verifiedAt: new Date(),
+            verificationResult: {
+              integrity: true,
+              authenticity: true,
+              nonRepudiation: true,
+            },
+          },
+        });
+      } else {
+        res.status(200).json({
+          status: "success",
+          message: "Document verification completed with issues",
+          data: {
+            documentId: document._id,
+            verifiedAt: new Date(),
+            verificationResult: {
+              integrity: true, // Assuming integrity passed since we got here
+              authenticity: false,
+              nonRepudiation: false,
+            },
+            warning:
+              "The document content is valid but the signature verification failed",
+          },
+        });
+      }
+    } catch (cryptoError) {
+      if (cryptoError.name === "IntegrityError") {
+        return next(
+          new AppError(
+            "Document integrity check failed - content may have been tampered with",
+            400
+          )
+        );
+      }
+      return next(new AppError("Document verification processing error", 500));
+    }
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * @desc    Download and decrypt a previously uploaded document with signature verification
  * @route   GET /api/documents/:id/download
  * @access  Private
@@ -115,7 +215,6 @@ const downloadDocument = async (req, res, next) => {
     );
 
     console.log(isSignatureValid);
-    
 
     if (!isSignatureValid) {
       await Log.create({
@@ -173,7 +272,9 @@ const downloadDocument = async (req, res, next) => {
 const getDocuments = async (req, res, next) => {
   try {
     const documents = await Document.find({ userId: req.userId })
-      .select("_id originalName createdAt mimeType digitalSignature publicKeyFingerprint")
+      .select(
+        "_id originalName createdAt mimeType digitalSignature publicKeyFingerprint"
+      )
       .sort({ createdAt: -1 })
       .lean();
 
@@ -310,4 +411,5 @@ module.exports = {
   getDocuments,
   updateDocument,
   deleteDocument,
+  verifyDocumentSignaturee,
 };
